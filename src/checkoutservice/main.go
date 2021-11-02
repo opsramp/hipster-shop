@@ -73,7 +73,7 @@ type checkoutService struct {
 }
 
 func main() {
-	otel := initLightstepTracing(log)
+	otel := initTracing(log)
 	defer otel.Shutdown()
 
 	port := listenPort
@@ -107,13 +107,18 @@ func main() {
 	log.Fatal(err)
 }
 
-func initLightstepTracing(log logrus.FieldLogger) launcher.Launcher {
+func initTracing(log logrus.FieldLogger) launcher.Launcher {
+	serviceName:= os.Getenv("SERVICE_NAME")
+	if serviceName == "" {
+		serviceName = "checkoutservice"
+	}
+
 	launcher := launcher.ConfigureOpentelemetry(
-		launcher.WithServiceName("checkoutservice"),
+		launcher.WithServiceName(serviceName),
 		launcher.WithServiceVersion("5.3.1"),
 		launcher.WithLogLevel("debug"),
-		launcher.WithSpanExporterEndpoint(fmt.Sprintf("%s:%s",
-			"otel-collector", "55680")),
+		launcher.WithSpanExporterEndpoint(fmt.Sprintf("%s",
+			os.Getenv("OTEL_ENDPOINT"))),
 		launcher.WithSpanExporterInsecure(true),
 		launcher.WithLogger(log),
 	)

@@ -28,6 +28,8 @@ namespace cartservice
        // const string LIGHTSTEP_ACCESS_TOKEN = "LS_ACCESS_TOKEN";
        // const string LIGHTSTEP_HOST = "LIGHTSTEP_HOST";
        // const string LIGHTSTEP_PORT = "LIGHTSTEP_PORT";
+       const string SERVICE_NAME = "SERVICE_NAME";
+       const string OTEL_ENDPOINT = "OTEL_ENDPOINT";
         public IConfiguration Configuration { get; }
         
         // This method gets called by the runtime. Use this method to add services to the container.
@@ -39,8 +41,15 @@ namespace cartservice
 
          //   string lsHost = Environment.GetEnvironmentVariable(LIGHTSTEP_HOST);
          //   int lsPort = Int32.Parse(Environment.GetEnvironmentVariable(LIGHTSTEP_PORT));
-              string serviceName = "cartservice"; //Environment.GetEnvironmentVariable("LS_SERVICE_NAME");
+              string serviceName = Environment.GetEnvironmentVariable(SERVICE_NAME);
+              string otelEndpoint = Environment.GetEnvironmentVariable(OTEL_ENDPOINT);
          //   string accessToken = Environment.GetEnvironmentVariable(LIGHTSTEP_ACCESS_TOKEN);
+
+            if (string.IsNullOrEmpty(serviceName))
+            {
+                serviceName = "cartservice";
+            }
+
             // create and register an activity source
             var activitySource = new ActivitySource(serviceName);
            // services.AddSingleton(activitySource);
@@ -73,7 +82,7 @@ namespace cartservice
                 .AddRedisInstrumentation(cartStore.Connection)
                 .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(serviceName))
                 .AddOtlpExporter(opt => {
-                    opt.Endpoint = "otel-collector:55680";
+                    opt.Endpoint = $"{otelEndpoint}";
              //       opt.Headers = new Metadata
              //       {
              //           { "lightstep-access-token", accessToken }

@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-const tracer = require('./tracer')(process.env.LS_SERVICE_NAME);
+const tracer = require('./tracer')(process.env.SERVICE_NAME);
 const opentelemetry = require('@opentelemetry/api');
 const PORT = process.env.PORT;
 

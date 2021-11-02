@@ -13,9 +13,9 @@ module.exports = (serviceName) => {
   const provider = new NodeTracerProvider();
 
   const exporter = new CollectorTraceExporter({
-    serviceName: 'currencyservice',
+    serviceName: `${process.env.SERVICE_NAME}`,
     logger: new ConsoleLogger(LogLevel.DEBUG),
-    url: `http://otel-collector:55681/v1/trace`,
+    url: `http://${process.env.OTEL_ENDPOINT_HTTP}/v1/trace`,
   });
 
   provider.addSpanProcessor(new SimpleSpanProcessor(exporter));
@@ -23,5 +23,5 @@ module.exports = (serviceName) => {
   // Initialize the OpenTelemetry APIs to use the NodeTracerProvider bindings
   provider.register();
 
-  return opentelemetry.trace.getTracer('currencyservice');
+  return opentelemetry.trace.getTracer(process.env.SERVICE_NAME);
 };

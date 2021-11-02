@@ -78,7 +78,7 @@ type frontendServer struct {
 func main() {
 	ctx := context.Background()
 	log := logrus.New()
-	otel := initLightstepTracing(log)
+	otel := initTracing(log)
 	defer otel.Shutdown()
 	log.Level = logrus.DebugLevel
 	log.Formatter = &logrus.JSONFormatter{
@@ -135,10 +135,18 @@ func main() {
 	log.Fatal(http.ListenAndServe(addr+":"+srvPort, handler))
 }
 
-func initLightstepTracing(log logrus.FieldLogger) launcher.Launcher {
+func initTracing(log logrus.FieldLogger) launcher.Launcher {
+	serviceName:= os.Getenv("SERVICE_NAME")
+	if serviceName == "" {
+		serviceName = "frontend"
+	}
+
 	launcher := launcher.ConfigureOpentelemetry(
+		launcher.WithServiceName(serviceName),
+		launcher.WithServiceVersion("5.3.1"),
 		launcher.WithLogLevel("debug"),
-		launcher.WithSpanExporterEndpoint(fmt.Sprintf("%s:%s", "otel-collector", "55680")),
+		launcher.WithSpanExporterEndpoint(fmt.Sprintf("%s",
+			os.Getenv("OTEL_ENDPOINT"))),
 		launcher.WithSpanExporterInsecure(true),
 		launcher.WithLogger(log),
 	)

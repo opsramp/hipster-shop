@@ -55,7 +55,7 @@ func init() {
 }
 
 func main() {
-	otel := initLightstepTracing(log)
+	otel := initTracing(log)
 	defer otel.Shutdown()
 
 	port := defaultPort
@@ -135,9 +135,19 @@ func (s *server) ShipOrder(ctx context.Context, in *pb.ShipOrderRequest) (*pb.Sh
 	}, nil
 }
 
-func initLightstepTracing(log logrus.FieldLogger) launcher.Launcher {
+func initTracing(log logrus.FieldLogger) launcher.Launcher {
+	serviceName:= os.Getenv("SERVICE_NAME")
+	if serviceName == "" {
+		serviceName = "shipping"
+	}
+
 	launcher := launcher.ConfigureOpentelemetry(
+		launcher.WithServiceName(serviceName),
+		launcher.WithServiceVersion("5.3.1"),
 		launcher.WithLogLevel("debug"),
+		launcher.WithSpanExporterEndpoint(fmt.Sprintf("%s",
+			os.Getenv("OTEL_ENDPOINT"))),
+		launcher.WithSpanExporterInsecure(true),
 		launcher.WithLogger(log),
 	)
 	log.Info("Initialized Lightstep OpenTelemetry launcher")
