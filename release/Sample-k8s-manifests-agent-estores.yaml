@@ -1,0 +1,422 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: opsramp-agent
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: opsrampagentcr
+rules:
+  - nonResourceURLs:
+      - "/version"
+      - "/healthz"
+      - "/metrics"
+    verbs: ["get"]
+  - apiGroups: [""]
+    resources:
+      - "nodes"
+      - "daemonsets"
+      - "deployments"
+      - "services"
+      - "events"
+      - "configmaps"
+      - "pods"
+      - "endpoints"
+      - "namespaces"
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources:
+      - "pods"
+      - "pods/exec"
+    verbs: ["get", "list", "create"]
+  - apiGroups: [""] # For Scheduler, controller and Api Metrics collection
+    resources:
+      - "pods/proxy"
+      - "nodes/proxy"
+      - "pods/metrics"
+      - "nodes/metrics"
+    verbs: ["get"]
+  - apiGroups: ["kubevirt.io"] #for kubevirt support, Kubernetes Version 1.15 and above
+    resources:
+      - "virtualmachines"
+      - "virtualmachineinstances"
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["subresources.kubevirt.io"] #for kubevirt support, Kubernetes Version 1.15 and above
+    resources:
+      - "virtualmachineinstances/filesystemlist"
+    verbs: ["get", "list"]
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: agent-updater
+rules:
+  - apiGroups: ["*"]
+    resources: ["pods", "daemonsets", "deployments"]
+    verbs: ["create", "delete", "get", "update"]
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: opsrampagent
+  namespace: opsramp-agent
+automountServiceAccountToken: true
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: opsrampagentupdate
+  namespace: opsramp-agent
+automountServiceAccountToken: true
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: opsrampagentrb
+subjects:
+  - kind: ServiceAccount
+    name: opsrampagent
+    namespace: opsramp-agent
+roleRef:
+  kind: ClusterRole
+  name: opsrampagentcr
+  apiGroup: rbac.authorization.k8s.io
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: agentupdaterb
+subjects:
+  - kind: ServiceAccount
+    name: opsrampagentupdate
+    namespace: opsramp-agent
+roleRef:
+  kind: ClusterRole
+  name: agent-updater
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: apps/v1
+# Kubernetes Versions after 1.9.0 should use apps/v1
+# Kubernetes Versions before 1.8.0 should use extensions/v1beta1 or apps/v1beta1
+kind: DaemonSet
+metadata:
+  name: opsramp-agent-worker
+  namespace: opsramp-agent
+spec:
+  updateStrategy:
+    type: RollingUpdate
+  minReadySeconds: 10
+  selector:
+    matchLabels:
+      name: opsramp-agent-worker
+  template:
+    metadata:
+      labels:
+        name: opsramp-agent-worker
+    spec:
+      hostNetwork: true
+      hostPID: true
+      tolerations:
+        - key: node-role.kubernetes.io/master
+          effect: NoSchedule
+      containers:
+        - image: jirs/opsramp-agent:tracing
+          imagePullPolicy: Always
+          name: opsramp-agent
+          terminationMessagePath: /dev/termination-log
+          env:
+            - name: AGENT_API_KEY
+              value: "<CLIENT_KEY>"
+            - name: AGENT_API_SECRET
+              value: "<CLIENT_SECRET>"
+            - name: INTEGRATION_RES_UUID
+              value: "<INT_RESUUID>"
+            - name: APP_SERVER
+              value: "<APP_SERVER>"
+            - name: CLIENT_ID
+              value: "<CLIENT_ID>"
+            - name: LOG_LEVEL
+              value: "warn"
+            - name: K8SAGENT
+              value: "TRUE"
+            - name: DOCKER_EVENTS
+              value: "FALSE"
+            - name: KUBERNETES_TYPE
+              value: "K8S"
+            - name: CONTAINER_ENGINE
+              value: "Docker"
+            - name: AUTO_MONITOR
+              value: "TRUE"
+            - name: KUBEVIRT_MONITORING
+              value: "FALSE"
+            - name: ENABLE_LOG_MANAGEMENT
+              value: "TRUE"
+            - name: OPSRAMP_SELF_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "250m"
+          securityContext:
+            privileged: true
+          volumeMounts:
+            - name: dockersocket
+              mountPath: /var/run/docker.sock
+              readOnly: true
+            - name: host-patch
+              mountPath: /opt/opsramp/agent/patch
+            - name: procdir
+              mountPath: /host/proc
+              readOnly: true
+            - name: cgroups
+              mountPath: /host/sys/fs/cgroup
+              readOnly: true
+            - name: mounts
+              mountPath: /host/mnt
+              readOnly: true
+            - name: agent-creds-volume
+              mountPath: /opt/opsramp/agent/conf/app.d/creds.yaml
+              subPath: creds.yaml
+              readOnly: true
+            - name: agent-custom-volume
+              mountPath: /opt/opsramp/agent/conf/app.d/discovery/auto-container-detection.yaml
+              subPath: auto-container-detection.yaml
+              readOnly: true
+            - name: var-log
+              mountPath: /var/log
+            - name: data-dir
+              mountPath: /opt/opsramp/agent/data/log
+            - name: var-lib
+              mountPath: /var/lib
+              readOnly: true
+      volumes:
+        - name: dockersocket
+          hostPath:
+            path: /var/run/docker.sock
+        - name: host-patch
+          hostPath:
+            path: /opt/opsramp/k8s/patch
+        - name: procdir
+          hostPath:
+            path: /proc
+        - name: cgroups
+          hostPath:
+            path: /sys/fs/cgroup
+        - name: mounts
+          hostPath:
+            path: /mnt
+        - name: agent-creds-volume
+          configMap:
+            name: agent-creds
+        - name: agent-custom-volume
+          configMap:
+            name: agent-custom
+        - name: var-log
+          hostPath:
+            path: /var/log
+        - name: var-lib
+          hostPath:
+            path: /var/lib
+        - name: data-dir
+          hostPath:
+            path: /var/lib/opsramp-logs
+      serviceAccount: opsrampagent
+      terminationGracePeriodSeconds: 10
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: opsramp-agent-master
+  namespace: opsramp-agent
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: opsramp-k8s-agent
+  strategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: opsramp-k8s-agent
+    spec:
+      containers:
+        - name: k8s-cluster-01-opsramp-k8s-agent
+          image: jirs/opsramp-agent:tracing
+          imagePullPolicy: Always
+          env:
+            - name: AGENT_API_KEY
+              value: "<CLIENT_KEY>"
+            - name: AGENT_API_SECRET
+              value: "<CLIENT_SECRET>"
+            - name: APP_SERVER
+              value: "<APP_SERVER>"
+            - name: CLIENT_ID
+              value: "<CLIENT_ID>"
+            - name: LOG_LEVEL
+              value: "warn"
+            - name: K8SAGENT_MASTER
+              value: "TRUE"
+            - name: MASTER_UUID
+              value: "<MASTERUUID>"
+            - name: INTEGRATION_RES_UUID
+              value: "<INT_RESUUID>"
+            - name: K8S_EVENTS
+              value: "FALSE"
+            - name: KUBERNETES_TYPE
+              value: "K8S"
+            - name: CONTAINER_ENGINE
+              value: "Docker"
+            - name: AUTO_MONITOR
+              value: "TRUE"
+            - name: ENABLE_TRACING
+              value: "TRUE"
+            - name: TRACING_ENDPOINT
+              value: "172.26.96.10:444"
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "250m"
+          ports:
+          - containerPort: 55679 # Default endpoint for ZPages.
+          - containerPort: 4317 # Default endpoint for OpenTelemetry receiver.
+          - containerPort: 4318 # Default endpoint for OpenTelemetry HTTP receiver.
+          - containerPort: 14250 # Default endpoint for Jaeger HTTP receiver.
+          - containerPort: 14268 # Default endpoint for Jaeger HTTP receiver.
+          - containerPort: 9411 # Default endpoint for Zipkin receiver.
+          - containerPort: 8888  # Default endpoint for querying metrics.
+          volumeMounts:
+          - name: opsramp-collector-config-vol
+            mountPath: /opt/opsramp/agent/conf/trace.d/trace-config.yaml
+            subPath: trace-config.yaml
+            readOnly: false
+      volumes:
+        - configMap:
+            name: opsramp-collector-conf
+          name: opsramp-collector-config-vol
+      serviceAccount: opsrampagent
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kube-events
+  labels:
+    name: kube-events
+  namespace: opsramp-agent
+data:
+  eventsConfig.yaml: |
+    node:
+    - RegisteredNode
+    - RemovingNode
+    - DeletingNode
+    - TerminatingEvictedPod
+    - NodeReady
+    - NodeNotReady
+    - NodeSchedulable
+    - NodeNotSchedulable
+    - CIDRNotAvailable
+    - CIDRAssignmentFailed
+    - Starting
+    - KubeletSetupFailed
+    - FailedMount
+    - NodeSelectorMismatching
+    - InsufficientFreeCPU
+    - InsufficientFreeMemory
+    - OutOfDisk
+    - HostNetworkNotSupported
+    - NilShaper
+    - Rebooted
+    - NodeHasSufficientDisk
+    - NodeOutOfDisk
+    - InvalidDiskCapacity
+    - FreeDiskSpaceFailed
+    pod:
+    - Failed
+    - InspectFailed
+    - ErrImageNeverPull
+    - Killing
+    - OutOfDisk
+    - HostPortConflict
+    other:
+    - FailedBinding
+    - FailedScheduling
+    - SuccessfulCreate
+    - FailedCreate
+    - SuccessfulDelete
+    - FailedDelete
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: opsramp-collector-conf
+  namespace: opsramp-agent
+  labels:
+    app: opsramp-agent
+    component: opsramp-collector-conf
+data:
+  trace-config.yaml: |
+    receivers:
+        otlp:
+          protocols:
+              grpc:
+                endpoint: "0.0.0.0:4317"
+              http:
+        jaeger:
+          protocols:
+            thrift_http:
+              endpoint: "0.0.0.0:14268"
+    processors:
+      batch:
+    exporters:
+      logging:
+      otlp:
+        endpoint: <ENDPOINT>
+        insecure: true
+        insecure_skip_verify: true
+        headers:
+          - authorization: <TOKEN>
+      jaeger:
+        endpoint: "jaeger-collector.default.svc.cluster.local:14250"
+        insecure: true
+    service:
+      pipelines:
+        traces:
+          receivers: [otlp, jaeger]
+          processors: [batch]
+          exporters: [logging,otlp,jaeger]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: opsramp-collector
+  namespace: opsramp-agent
+  labels:
+    app: opsramp-agent
+    component: opsramp-collector
+spec:
+  ports:
+  - name: otlp-grpc # Default endpoint for OpenTelemetry gRPC receiver.
+    port: 4317
+    protocol: TCP
+    targetPort: 4317
+  - name: otlp-http # Default endpoint for OpenTelemetry HTTP receiver.
+    port: 4318
+    protocol: TCP
+    targetPort: 4318
+  - name: jaeger-thrift # Default endpoint for jaeger  receiver.
+    port: 14268
+    protocol: TCP
+    targetPort: 14268
+  - name: metrics # Default endpoint for querying metrics.
+    port: 8888
+  selector:
+    app: opsramp-k8s-agent

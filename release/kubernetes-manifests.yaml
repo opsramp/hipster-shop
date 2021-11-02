@@ -19,176 +19,6 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: emailservice
-spec:
-  selector:
-    matchLabels:
-      app: emailservice
-  template:
-    metadata:
-      labels:
-        app: emailservice
-    spec:
-      terminationGracePeriodSeconds: 5
-      containers:
-      - name: server
-        image: gcr.io/google-samples/microservices-demo/emailservice:v0.1.3
-        ports:
-        - containerPort: 8080
-        env:
-        - name: PORT
-          value: "8080"
-        - name: ENABLE_PROFILER
-          value: "0"
-        readinessProbe:
-          periodSeconds: 5
-          exec:
-            command: ["/bin/grpc_health_probe", "-addr=:8080"]
-        livenessProbe:
-          periodSeconds: 5
-          exec:
-            command: ["/bin/grpc_health_probe", "-addr=:8080"]
-        resources:
-          requests:
-            cpu: 100m
-            memory: 64Mi
-          limits:
-            cpu: 200m
-            memory: 128Mi
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: emailservice
-spec:
-  type: ClusterIP
-  selector:
-    app: emailservice
-  ports:
-  - name: grpc
-    port: 5000
-    targetPort: 8080
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: checkoutservice
-spec:
-  selector:
-    matchLabels:
-      app: checkoutservice
-  template:
-    metadata:
-      labels:
-        app: checkoutservice
-    spec:
-      containers:
-        - name: server
-          image: gcr.io/google-samples/microservices-demo/checkoutservice:v0.1.3
-          ports:
-          - containerPort: 5050
-          readinessProbe:
-            exec:
-              command: ["/bin/grpc_health_probe", "-addr=:5050"]
-          livenessProbe:
-            exec:
-              command: ["/bin/grpc_health_probe", "-addr=:5050"]
-          env:
-          - name: PORT
-            value: "5050"
-          - name: PRODUCT_CATALOG_SERVICE_ADDR
-            value: "productcatalogservice:3550"
-          - name: SHIPPING_SERVICE_ADDR
-            value: "shippingservice:50051"
-          - name: PAYMENT_SERVICE_ADDR
-            value: "paymentservice:50051"
-          - name: EMAIL_SERVICE_ADDR
-            value: "emailservice:5000"
-          - name: CURRENCY_SERVICE_ADDR
-            value: "currencyservice:7000"
-          - name: CART_SERVICE_ADDR
-            value: "cartservice:7070"
-          # - name: JAEGER_SERVICE_ADDR
-          #   value: "jaeger-collector:14268"
-          resources:
-            requests:
-              cpu: 100m
-              memory: 64Mi
-            limits:
-              cpu: 200m
-              memory: 128Mi
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: checkoutservice
-spec:
-  type: ClusterIP
-  selector:
-    app: checkoutservice
-  ports:
-  - name: grpc
-    port: 5050
-    targetPort: 5050
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: recommendationservice
-spec:
-  selector:
-    matchLabels:
-      app: recommendationservice
-  template:
-    metadata:
-      labels:
-        app: recommendationservice
-    spec:
-      terminationGracePeriodSeconds: 5
-      containers:
-      - name: server
-        image: gcr.io/google-samples/microservices-demo/recommendationservice:v0.1.3
-        ports:
-        - containerPort: 8080
-        readinessProbe:
-          periodSeconds: 5
-          exec:
-            command: ["/bin/grpc_health_probe", "-addr=:8080"]
-        livenessProbe:
-          periodSeconds: 5
-          exec:
-            command: ["/bin/grpc_health_probe", "-addr=:8080"]
-        env:
-        - name: PORT
-          value: "8080"
-        - name: PRODUCT_CATALOG_SERVICE_ADDR
-          value: "productcatalogservice:3550"
-        - name: ENABLE_PROFILER
-          value: "0"
-        resources:
-          requests:
-            cpu: 100m
-            memory: 220Mi
-          limits:
-            cpu: 200m
-            memory: 450Mi
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: recommendationservice
-spec:
-  type: ClusterIP
-  selector:
-    app: recommendationservice
-  ports:
-  - name: grpc
-    port: 8080
-    targetPort: 8080
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
   name: frontend
 spec:
   selector:
@@ -201,9 +31,11 @@ spec:
       annotations:
         sidecar.istio.io/rewriteAppHTTPProbers: "true"
     spec:
+      imagePullSecrets:
+      - name: regcred
       containers:
         - name: server
-          image: gcr.io/google-samples/microservices-demo/frontend:v0.1.3
+          image: jirs/sample-ms-frontend:launcher3
           ports:
           - containerPort: 8080
           readinessProbe:
@@ -226,21 +58,29 @@ spec:
           - name: PORT
             value: "8080"
           - name: PRODUCT_CATALOG_SERVICE_ADDR
-            value: "productcatalogservice:3550"
+            value: "productcatalogservice.hipster-shop.svc.cluster.local:3550"
           - name: CURRENCY_SERVICE_ADDR
-            value: "currencyservice:7000"
+            value: "currencyservice.hipster-shop.svc.cluster.local:7000"
           - name: CART_SERVICE_ADDR
-            value: "cartservice:7070"
+            value: "cartservice.hipster-shop.svc.cluster.local:7070"
           - name: RECOMMENDATION_SERVICE_ADDR
-            value: "recommendationservice:8080"
+            value: "recommendationservice.hipster-shop.svc.cluster.local:8080"
           - name: SHIPPING_SERVICE_ADDR
-            value: "shippingservice:50051"
+            value: "shippingservice.hipster-shop.svc.cluster.local:50051"
           - name: CHECKOUT_SERVICE_ADDR
-            value: "checkoutservice:5050"
+            value: "checkoutservice.hipster-shop.svc.cluster.local:5050"
           - name: AD_SERVICE_ADDR
-            value: "adservice:9555"
-          # - name: JAEGER_SERVICE_ADDR
-          #   value: "jaeger-collector:14268"
+            value: "adservice.hipster-shop.svc.cluster.local:9555"
+          # - name: DISABLE_TRACING
+          #   value: "1"
+          - name: DISABLE_PROFILER
+            value: "1"
+          - name: SERVICE_NAME
+            value: "frontend"
+          - name: OTEL_ENDPOINT
+            value: "opsramp-collector.opsramp-agent.svc.cluster.local:4317"
+          #- name: JAEGER_SERVICE_ADDR
+          #  value: "jaeger-collector:14268"
           resources:
             requests:
               cpu: 100m
@@ -267,7 +107,7 @@ kind: Service
 metadata:
   name: frontend-external
 spec:
-  type: LoadBalancer
+  type: NodePort
   selector:
     app: frontend
   ports:
@@ -289,14 +129,20 @@ spec:
         app: paymentservice
     spec:
       terminationGracePeriodSeconds: 5
+      imagePullSecrets:
+      - name: regcred
       containers:
       - name: server
-        image: gcr.io/google-samples/microservices-demo/paymentservice:v0.1.3
+        image: jirs/sample-ms-paymentservice:launcher3
         ports:
         - containerPort: 50051
         env:
         - name: PORT
           value: "50051"
+        - name: OTEL_ENDPOINT_HTTP
+          value: "opsramp-collector.opsramp-agent.svc.cluster.local:4318"
+        - name: SERVICE_NAME
+          value: "paymentservice"
         readinessProbe:
           exec:
             command: ["/bin/grpc_health_probe", "-addr=:50051"]
@@ -327,246 +173,76 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: productcatalogservice
+  name: checkoutservice
 spec:
   selector:
     matchLabels:
-      app: productcatalogservice
+      app: checkoutservice
   template:
     metadata:
       labels:
-        app: productcatalogservice
+        app: checkoutservice
     spec:
-      terminationGracePeriodSeconds: 5
+      imagePullSecrets:
+      - name: regcred
       containers:
-      - name: server
-        image: gcr.io/google-samples/microservices-demo/productcatalogservice:v0.1.3
-        ports:
-        - containerPort: 3550
-        env:
-        - name: PORT
-          value: "3550"
-        readinessProbe:
-          exec:
-            command: ["/bin/grpc_health_probe", "-addr=:3550"]
-        livenessProbe:
-          exec:
-            command: ["/bin/grpc_health_probe", "-addr=:3550"]
-#        env:
-#          - name: JAEGER_SERVICE_ADDR
-#            value: "jaeger-collector:14268"
-        resources:
-          requests:
-            cpu: 100m
-            memory: 64Mi
-          limits:
-            cpu: 200m
-            memory: 128Mi
+        - name: server
+          image: jirs/sample-ms-checkoutservice:launcher3
+          ports:
+          - containerPort: 5050
+          readinessProbe:
+            exec:
+              command: ["/bin/grpc_health_probe", "-addr=:5050"]
+          livenessProbe:
+            exec:
+              command: ["/bin/grpc_health_probe", "-addr=:5050"]
+          env:
+          - name: PORT
+            value: "5050"
+          - name: PRODUCT_CATALOG_SERVICE_ADDR
+            value: "productcatalogservice.hipster-shop.svc.cluster.local:3550"
+          - name: SHIPPING_SERVICE_ADDR
+            value: "shippingservice.hipster-shop.svc.cluster.local:50051"
+          - name: PAYMENT_SERVICE_ADDR
+            value: "paymentservice.hipster-shop.svc.cluster.local:50051"
+          - name: EMAIL_SERVICE_ADDR
+            value: "emailservice.hipster-shop.svc.cluster.local:5000"
+          - name: CURRENCY_SERVICE_ADDR
+            value: "currencyservice.hipster-shop.svc.cluster.local:7000"
+          - name: CART_SERVICE_ADDR
+            value: "cartservice.hipster-shop.svc.cluster.local:7070"
+          - name: OTEL_ENDPOINT
+            value: "opsramp-collector.opsramp-agent.svc.cluster.local:4317"
+          - name: SERVICE_NAME
+            value: "checkoutservice"
+          # - name: DISABLE_STATS
+          #   value: "1"
+          # - name: DISABLE_TRACING
+          #   value: "1"
+          # - name: DISABLE_PROFILER
+          #   value: "1"
+          #- name: JAEGER_SERVICE_ADDR
+          #  value: "jaeger-collector:14268"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: productcatalogservice
+  name: checkoutservice
 spec:
   type: ClusterIP
   selector:
-    app: productcatalogservice
+    app: checkoutservice
   ports:
   - name: grpc
-    port: 3550
-    targetPort: 3550
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: cartservice
-spec:
-  selector:
-    matchLabels:
-      app: cartservice
-  template:
-    metadata:
-      labels:
-        app: cartservice
-    spec:
-      terminationGracePeriodSeconds: 5
-      containers:
-      - name: server
-        image: gcr.io/google-samples/microservices-demo/cartservice:v0.1.3
-        ports:
-        - containerPort: 7070
-        env:
-        - name: REDIS_ADDR
-          value: "redis-cart:6379"
-        - name: PORT
-          value: "7070"
-        - name: LISTEN_ADDR
-          value: "0.0.0.0"
-        resources:
-          requests:
-            cpu: 200m
-            memory: 64Mi
-          limits:
-            cpu: 300m
-            memory: 128Mi
-        readinessProbe:
-          initialDelaySeconds: 15
-          exec:
-            command: ["/bin/grpc_health_probe", "-addr=:7070", "-rpc-timeout=5s"]
-        livenessProbe:
-          initialDelaySeconds: 15
-          periodSeconds: 10
-          exec:
-            command: ["/bin/grpc_health_probe", "-addr=:7070", "-rpc-timeout=5s"]
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: cartservice
-spec:
-  type: ClusterIP
-  selector:
-    app: cartservice
-  ports:
-  - name: grpc
-    port: 7070
-    targetPort: 7070
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: loadgenerator
-spec:
-  selector:
-    matchLabels:
-      app: loadgenerator
-  replicas: 1
-  template:
-    metadata:
-      labels:
-        app: loadgenerator
-      annotations:
-        sidecar.istio.io/rewriteAppHTTPProbers: "true"
-    spec:
-      terminationGracePeriodSeconds: 5
-      restartPolicy: Always
-      containers:
-      - name: main
-        image: gcr.io/google-samples/microservices-demo/loadgenerator:v0.1.3
-        env:
-        - name: FRONTEND_ADDR
-          value: "frontend:80"
-        - name: USERS
-          value: "10"
-        resources:
-          requests:
-            cpu: 300m
-            memory: 256Mi
-          limits:
-            cpu: 500m
-            memory: 512Mi
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: currencyservice
-spec:
-  selector:
-    matchLabels:
-      app: currencyservice
-  template:
-    metadata:
-      labels:
-        app: currencyservice
-    spec:
-      terminationGracePeriodSeconds: 5
-      containers:
-      - name: server
-        image: gcr.io/google-samples/microservices-demo/currencyservice:v0.1.3
-        ports:
-        - name: grpc
-          containerPort: 7000
-        env:
-        - name: PORT
-          value: "7000"
-        readinessProbe:
-          exec:
-            command: ["/bin/grpc_health_probe", "-addr=:7000"]
-        livenessProbe:
-          exec:
-            command: ["/bin/grpc_health_probe", "-addr=:7000"]
-        resources:
-          requests:
-            cpu: 100m
-            memory: 64Mi
-          limits:
-            cpu: 200m
-            memory: 128Mi
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: currencyservice
-spec:
-  type: ClusterIP
-  selector:
-    app: currencyservice
-  ports:
-  - name: grpc
-    port: 7000
-    targetPort: 7000
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: shippingservice
-spec:
-  selector:
-    matchLabels:
-      app: shippingservice
-  template:
-    metadata:
-      labels:
-        app: shippingservice
-    spec:
-      containers:
-      - name: server
-        image: gcr.io/google-samples/microservices-demo/shippingservice:v0.1.3
-        ports:
-        - containerPort: 50051
-        env:
-        - name: PORT
-          value: "50051"
-        readinessProbe:
-          periodSeconds: 5
-          exec:
-            command: ["/bin/grpc_health_probe", "-addr=:50051"]
-        livenessProbe:
-          exec:
-            command: ["/bin/grpc_health_probe", "-addr=:50051"]
-#        env:
-#          - name: JAEGER_SERVICE_ADDR
-#            value: "jaeger-collector:14268"
-        resources:
-          requests:
-            cpu: 100m
-            memory: 64Mi
-          limits:
-            cpu: 200m
-            memory: 128Mi
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: shippingservice
-spec:
-  type: ClusterIP
-  selector:
-    app: shippingservice
-  ports:
-  - name: grpc
-    port: 50051
-    targetPort: 50051
+    port: 5050
+    targetPort: 5050
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -581,6 +257,8 @@ spec:
       labels:
         app: redis-cart
     spec:
+      imagePullSecrets:
+      - name: regcred
       containers:
       - name: redis
         image: redis:alpine
@@ -624,6 +302,132 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  name: productcatalogservice
+spec:
+  selector:
+    matchLabels:
+      app: productcatalogservice
+  template:
+    metadata:
+      labels:
+        app: productcatalogservice
+    spec:
+      terminationGracePeriodSeconds: 5
+      imagePullSecrets:
+      - name: regcred
+      containers:
+      - name: server
+        image: jirs/sample-ms-productcatalogservice:launcher3
+        ports:
+        - containerPort: 3550
+        env:
+        - name: PORT
+          value: "3550"
+        - name: SERVICE_NAME
+          value: "productcatalog"
+        - name: OTEL_ENDPOINT
+          value: "opsramp-collector.opsramp-agent.svc.cluster.local:4317"
+        # - name: DISABLE_STATS
+        #   value: "1"
+        # - name: DISABLE_TRACING
+        #   value: "1"
+        # - name: DISABLE_PROFILER
+        #   value: "1"
+        #- name: JAEGER_SERVICE_ADDR
+        #  value: "jaeger-collector:14268"
+        readinessProbe:
+          exec:
+            command: ["/bin/grpc_health_probe", "-addr=:3550"]
+        livenessProbe:
+          exec:
+            command: ["/bin/grpc_health_probe", "-addr=:3550"]
+        resources:
+          requests:
+            cpu: 100m
+            memory: 64Mi
+          limits:
+            cpu: 200m
+            memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: productcatalogservice
+spec:
+  type: ClusterIP
+  selector:
+    app: productcatalogservice
+  ports:
+  - name: grpc
+    port: 3550
+    targetPort: 3550
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: shippingservice
+spec:
+  selector:
+    matchLabels:
+      app: shippingservice
+  template:
+    metadata:
+      labels:
+        app: shippingservice
+    spec:
+      imagePullSecrets:
+      - name: regcred
+      containers:
+      - name: server
+        image: jirs/sample-ms-shippingservice:launcher3
+        ports:
+        - containerPort: 50051
+        env:
+        - name: PORT
+          value: "50051"
+        - name: SERVICE_NAME
+          value: "shipping"
+        - name: OTEL_ENDPOINT
+          value: "opsramp-collector.opsramp-agent.svc.cluster.local:4317"
+        # - name: DISABLE_STATS
+        #   value: "1"
+        # - name: DISABLE_TRACING
+        #   value: "1"
+        # - name: DISABLE_PROFILER
+        #   value: "1"
+        # - name: JAEGER_SERVICE_ADDR
+        #  value: "jaeger-collector:14268"
+        readinessProbe:
+          periodSeconds: 5
+          exec:
+            command: ["/bin/grpc_health_probe", "-addr=:50051"]
+        livenessProbe:
+          exec:
+            command: ["/bin/grpc_health_probe", "-addr=:50051"]
+        resources:
+          requests:
+            cpu: 100m
+            memory: 64Mi
+          limits:
+            cpu: 200m
+            memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: shippingservice
+spec:
+  type: ClusterIP
+  selector:
+    app: shippingservice
+  ports:
+  - name: grpc
+    port: 50051
+    targetPort: 50051
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
   name: adservice
 spec:
   selector:
@@ -635,16 +439,24 @@ spec:
         app: adservice
     spec:
       terminationGracePeriodSeconds: 5
+      imagePullSecrets:
+      - name: regcred
       containers:
       - name: server
-        image: gcr.io/google-samples/microservices-demo/adservice:v0.1.3
+        image: jirs/sample-ms-adservice:launcher3
         ports:
         - containerPort: 9555
         env:
         - name: PORT
           value: "9555"
-        #- name: JAEGER_SERVICE_ADDR
+        # - name: DISABLE_STATS
+        #   value: "1"
+        # - name: DISABLE_TRACING
+        #   value: "1"
+        # - name: JAEGER_SERVICE_ADDR
         #  value: "jaeger-collector:14268"
+        - name: SERVICE_NAME
+          value: "adservice"
         resources:
           requests:
             cpu: 200m
@@ -676,3 +488,248 @@ spec:
     port: 9555
     targetPort: 9555
 ---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: currencyservice
+spec:
+  selector:
+    matchLabels:
+      app: currencyservice
+  template:
+    metadata:
+      labels:
+        app: currencyservice
+    spec:
+      terminationGracePeriodSeconds: 5
+      imagePullSecrets:
+      - name: regcred
+      containers:
+      - name: server
+        image: jirs/sample-ms-currencyservice:launcher3
+        ports:
+        - name: grpc
+          containerPort: 7000
+        env:
+        - name: PORT
+          value: "7000"
+        - name: OTEL_ENDPOINT_HTTP
+          value: "opsramp-collector.opsramp-agent.svc.cluster.local:4318"
+        - name: SERVICE_NAME
+          value: "currencyservice"
+        # - name: DISABLE_TRACING
+        #   value: "1"
+        # - name: DISABLE_PROFILER
+        #   value: "1"
+        # - name: DISABLE_DEBUGGER
+        #   value: "1"
+        readinessProbe:
+          exec:
+            command: ["/bin/grpc_health_probe", "-addr=:7000"]
+        livenessProbe:
+          exec:
+            command: ["/bin/grpc_health_probe", "-addr=:7000"]
+        resources:
+          requests:
+            cpu: 100m
+            memory: 64Mi
+          limits:
+            cpu: 200m
+            memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: currencyservice
+spec:
+  type: ClusterIP
+  selector:
+    app: currencyservice
+  ports:
+  - name: grpc
+    port: 7000
+    targetPort: 7000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: recommendationservice
+spec:
+  selector:
+    matchLabels:
+      app: recommendationservice
+  template:
+    metadata:
+      labels:
+        app: recommendationservice
+    spec:
+      terminationGracePeriodSeconds: 5
+      imagePullSecrets:
+      - name: regcred
+      containers:
+      - name: server
+        image: jirs/sample-ms-recommendationservice:launcher
+        ports:
+        - containerPort: 8080
+        readinessProbe:
+          periodSeconds: 5
+          exec:
+            command: ["/bin/grpc_health_probe", "-addr=:8080"]
+        livenessProbe:
+          periodSeconds: 5
+          exec:
+            command: ["/bin/grpc_health_probe", "-addr=:8080"]
+        env:
+        - name: PORT
+          value: "8080"
+        - name: PRODUCT_CATALOG_SERVICE_ADDR
+          value: "productcatalogservice.hipster-shop.svc.cluster.local:3550"
+        # - name: DISABLE_TRACING
+        #   value: "1"
+        - name: DISABLE_PROFILER
+          value: "1"
+        # - name: DISABLE_DEBUGGER
+        #   value: "1"
+        #- name: JAEGER_SERVICE_ADDR
+        #  value: "jaeger-collector:14268"
+        resources:
+          requests:
+            cpu: 100m
+            memory: 220Mi
+          limits:
+            cpu: 200m
+            memory: 450Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: recommendationservice
+spec:
+  type: ClusterIP
+  selector:
+    app: recommendationservice
+  ports:
+  - name: grpc
+    port: 8080
+    targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cartservice
+spec:
+  selector:
+    matchLabels:
+      app: cartservice
+  template:
+    metadata:
+      labels:
+        app: cartservice
+    spec:
+      terminationGracePeriodSeconds: 5
+      imagePullSecrets:
+      - name: regcred
+      containers:
+      - name: server
+        image: jirs/sample-ms-cartservice:launcher3
+        ports:
+        - containerPort: 7070
+        env:
+        - name: REDIS_ADDR
+          value: "redis-cart:6379"
+        - name: PORT
+          value: "7070"
+        - name: LISTEN_ADDR
+          value: "0.0.0.0"
+        - name: OTEL_ENDPOINT
+          value: "opsramp-collector.opsramp-agent.svc.cluster.local:4317"
+        - name: SERVICE_NAME
+          value: "cartservice"
+        resources:
+          requests:
+            cpu: 200m
+            memory: 64Mi
+          limits:
+            cpu: 300m
+            memory: 128Mi
+        readinessProbe:
+          initialDelaySeconds: 15
+          exec:
+            command: ["/bin/grpc_health_probe", "-addr=:7070", "-rpc-timeout=5s"]
+        livenessProbe:
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          exec:
+            command: ["/bin/grpc_health_probe", "-addr=:7070", "-rpc-timeout=5s"]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cartservice
+spec:
+  type: ClusterIP
+  selector:
+    app: cartservice
+  ports:
+  - name: grpc
+    port: 7070
+    targetPort: 7070
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: emailservice
+spec:
+  selector:
+    matchLabels:
+      app: emailservice
+  template:
+    metadata:
+      labels:
+        app: emailservice
+    spec:
+      terminationGracePeriodSeconds: 5
+      imagePullSecrets:
+      - name: regcred
+      containers:
+      - name: server
+        image: jirs/sample-ms-emailservice:launcher
+        ports:
+        - containerPort: 8080
+        env:
+        - name: PORT
+          value: "8080"
+        # - name: DISABLE_TRACING
+        #   value: "1"
+        - name: DISABLE_PROFILER
+          value: "1"
+        #- name: JAEGER_SERVICE_ADDR
+        #  value: "jaeger-collector:14268"
+        readinessProbe:
+          periodSeconds: 5
+          exec:
+            command: ["/bin/grpc_health_probe", "-addr=:8080"]
+        livenessProbe:
+          periodSeconds: 5
+          exec:
+            command: ["/bin/grpc_health_probe", "-addr=:8080"]
+        resources:
+          requests:
+            cpu: 100m
+            memory: 64Mi
+          limits:
+            cpu: 200m
+            memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: emailservice
+spec:
+  type: ClusterIP
+  selector:
+    app: emailservice
+  ports:
+  - name: grpc
+    port: 5000
+    targetPort: 8080
