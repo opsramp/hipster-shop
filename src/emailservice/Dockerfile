@@ -23,10 +23,15 @@ WORKDIR /email_server
 # get packages
 COPY requirements.txt .
 RUN pip install -r requirements.txt
-RUN pip install opentelemetry-launcher
+# RUN pip install opentelemetry-launcher
 
 # Add the application
 COPY . .
+
+ENV LS_SERVICE_NAME "emailservice"
+ENV OTEL_EXPORTER_OTLP_TRACES_INSECURE true
+ENV OTEL_EXPORTER_OTLP_TRACES_ENDPOINT "otel-collector:55680"
+ENV OTEL_EXPORTER_OTLP_SPAN_ENDPOINT "otel-collector:55680"
 
 EXPOSE 8080
 ENTRYPOINT [ "opentelemetry-instrument", "python", "email_server.py" ]

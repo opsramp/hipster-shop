@@ -14,7 +14,7 @@ RUN GRPC_HEALTH_PROBE_VERSION=v0.2.0 && \
 WORKDIR /recommendationservice
 COPY requirements.txt requirements.txt
 RUN pip install -r requirements.txt
-RUN pip install opentelemetry-launcher
+# RUN pip install opentelemetry-launcher
 
 # add files into working directory
 COPY . .
@@ -22,5 +22,10 @@ COPY . .
 # set listen port
 ENV PORT "8080"
 EXPOSE 8080
+
+ENV LS_SERVICE_NAME "recommendationservice"
+ENV OTEL_EXPORTER_OTLP_TRACES_INSECURE true
+ENV OTEL_EXPORTER_OTLP_TRACES_ENDPOINT "otel-collector:55680"
+ENV OTEL_EXPORTER_OTLP_SPAN_ENDPOINT "otel-collector:55680"
 
 ENTRYPOINT ["opentelemetry-instrument", "python", "/recommendationservice/recommendation_server.py"]

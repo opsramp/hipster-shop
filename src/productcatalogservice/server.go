@@ -33,16 +33,16 @@ import (
 	pb "github.com/GoogleCloudPlatform/microservices-demo/src/productcatalogservice/genproto"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 
-	"github.com/lightstep/otel-launcher-go/launcher"
+	"github.com/kant777/otel-launcher-go/launcher"
 	"github.com/sirupsen/logrus"
 	grpcotel "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/label"
+	label "go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -55,11 +55,11 @@ var (
 	port = "3550"
 
 	reloadCatalog       bool
-	meter               = otel.Meter("productcatalogservice/metrics")
+	meter               = global.Meter("productcatalogservice/metrics")
 	gpLock              = new(sync.RWMutex)
 	gpValue             = new(float64)
 	gpLabels            = new([]label.KeyValue)
-	getProductsObserver = metric.Must(meter).NewFloat64ValueObserver("catalog.getProducts.time", func(ctx context.Context, result metric.Float64ObserverResult) {
+	getProductsObserver = metric.Must(meter).NewFloat64UpDownCounterObserver("catalog.getProducts.time", func(ctx context.Context, result metric.Float64ObserverResult) {
 		(*gpLock).RLock()
 		value := *gpValue
 		labels := *gpLabels
@@ -121,6 +121,8 @@ func main() {
 
 	if os.Getenv("PORT") != "" {
 		port = os.Getenv("PORT")
+	} else {
+		port = "3550"
 	}
 	log.Infof("starting grpc server at :%s", port)
 	run(port)
@@ -149,6 +151,7 @@ func initLightstepTracing(log logrus.FieldLogger) launcher.Launcher {
 	launcher := launcher.ConfigureOpentelemetry(
 		launcher.WithLogLevel("debug"),
 		launcher.WithLogger(log),
+		launcher.WithSpanExporterInsecure(true),
 	)
 	log.Info("Initialized Lightstep OpenTelemetry launcher")
 	return launcher

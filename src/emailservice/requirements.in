@@ -1,4 +1,4 @@
-opentelemetry-launcher==0.17b0
+git+https://github.com/opsramp/otel-launcher-python@v0.17b0
 python-json-logger==0.1.9
 grpcio-health-checking==1.13.0
 grpcio~=1.27

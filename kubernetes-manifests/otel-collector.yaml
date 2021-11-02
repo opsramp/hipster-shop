@@ -39,17 +39,11 @@ spec:
         ports:
         - containerPort: 13133 # Default endpoint for health_check
         - containerPort: 55680 # Default endpoint for OpenTelemetry receiver.
-        envFrom:
-        - configMapRef:
-            name: lightstep-configmap
+        - containerPort: 55681 # Default endpoint for OpenTelemetry receiver.
+
         env:
         - name: REDIS_ADDR
           value: "redis-cart:6379"
-        - name: LS_ACCESS_TOKEN
-          valueFrom:
-            secretKeyRef:
-              name: lightstep-credentials
-              key: accessToken
 
         volumeMounts:
         - name: otel-collector-config-vol
@@ -83,3 +77,6 @@ spec:
     - name: grpc
       port: 55680
       targetPort: 55680
+    - name: http
+      port: 55681
+      targetPort: 55681

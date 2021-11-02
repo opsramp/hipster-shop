@@ -30,9 +30,6 @@ spec:
           image: shippingservice
           ports:
             - containerPort: 50051
-          envFrom:
-          - configMapRef:
-              name: lightstep-configmap
           env:
             - name: OTEL_EXPORTER_OTLP_SPAN_ENDPOINT
               value: otel-collector:55680
@@ -40,13 +37,8 @@ spec:
               value: 'true'
             - name: PORT
               value: "50051"
-            - name: LS_SERVICE_NAME
+            - name: SERVICE_NAME
               value: shippingservice
-            - name: LS_ACCESS_TOKEN
-              valueFrom:
-                secretKeyRef:
-                  name: lightstep-credentials
-                  key: accessToken
           readinessProbe:
             periodSeconds: 5
             exec:

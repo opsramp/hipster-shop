@@ -22,7 +22,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	"github.com/lightstep/otel-launcher-go/launcher"
+	"github.com/kant777/otel-launcher-go/launcher"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux"
@@ -138,11 +138,11 @@ func main() {
 func initLightstepTracing(log logrus.FieldLogger) launcher.Launcher {
 	launcher := launcher.ConfigureOpentelemetry(
 		launcher.WithLogLevel("debug"),
-		launcher.WithSpanExporterEndpoint(fmt.Sprintf("%s:%s",
-			os.Getenv("LIGHTSTEP_HOST"), os.Getenv("LIGHTSTEP_PORT"))),
+		launcher.WithSpanExporterEndpoint(fmt.Sprintf("%s:%s", "otel-collector", "55680")),
+		launcher.WithSpanExporterInsecure(true),
 		launcher.WithLogger(log),
 	)
-	log.Info("Initialized Lightstep OpenTelemetry launcher")
+	log.Info("Initialized OpenTelemetry launcher")
 	return launcher
 }
 

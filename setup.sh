@@ -15,13 +15,14 @@ kube_node_check () {
   [[ $output != "The connection to the server kubernetes.docker.internal:6443 was refused - did you specify the right host or port?" ]] && echo Connection verified
 }
 
+
 # Lightstep access token
-set_ls_credentials () {
-  echo
-  echo Setting up an lightstep-credentials secret in Kubernetes
-  kubectl create secret generic lightstep-credentials --from-literal=accessToken="$LIGHTSTEP_ACCESS_TOKEN" || echo "Secret already present, not updated. If you've changed your access token please run 'make clean' before running 'make setup' again"
-  echo
-}
+#set_ls_credentials () {
+#  echo
+#  echo Setting up an lightstep-credentials secret in Kubernetes
+#  kubectl create secret generic lightstep-credentials --from-literal=accessToken="$LIGHTSTEP_ACCESS_TOKEN" || echo "Secret already present, not updated. If you've changed your access token please run 'make clean' before running 'make setup' again"
+#  echo
+#}
 
 # Run skaffold
 run_skaffold () {
@@ -101,7 +102,7 @@ minikube_steps () {
   echo Starting Minikube
   minikube start --cpus=4 --memory 4096
   kube_node_check #TODO better error handling
-  set_ls_credentials
+  #set_ls_credentials
   run_skaffold
   wait_for_store
   success_message
@@ -122,7 +123,7 @@ check_env_variables () {
 echo 
 echo Welcome to the Lightstep Mock Application Setup!
 echo
-check_env_variables
+#check_env_variables
 echo Help answer a couple questions about your environment and we\'ll get you up and running.
 echo
 # What Kubernetes cluster is being used?

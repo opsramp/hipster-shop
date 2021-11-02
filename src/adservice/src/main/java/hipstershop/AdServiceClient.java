@@ -133,7 +133,8 @@ public class AdServiceClient {
     RpcViews.registerAllGrpcViews();
 
     // Registers Stackdriver exporters.
-    long sleepTime = 10; /* seconds */
+    /*
+    long sleepTime = 10; // seconds
     int maxAttempts = 3;
 
     for (int i = 0; i < maxAttempts; i++) {
@@ -159,7 +160,7 @@ public class AdServiceClient {
           }
         }
       }
-    }
+    }*/
 
     // Register Prometheus exporters and export metrics to a Prometheus HTTPServer.
     // PrometheusStatsCollector.createAndRegister();

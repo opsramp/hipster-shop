@@ -11,26 +11,40 @@ data:
         health_check:
 
     receivers:
+        jaeger:
+          protocols:
+            thrift_http:
+              endpoint: "otel-collector:14268"            
         redis:
           endpoint: "${REDIS_ADDR}"
           service_name: "cartservice"
           collection_interval: 10s
-        k8s_cluster:
-          auth_type: serviceAccount
-          node_conditions_to_report: [Ready, MemoryPressure]
         otlp:
           protocols:
-              grpc:
-      
+            grpc:
+            http:
+        otlp/2:
+          protocols:
+            grpc:
+              endpoint: "0.0.0.0:55690"
+
     exporters:
         logging:
             loglevel: debug
 
         # configuring otlp to public satellites
         otlp:
-          endpoint: "${LIGHTSTEP_HOST}:${LIGHTSTEP_PORT}"
-          headers: 
-            "lightstep-access-token": "${LS_ACCESS_TOKEN}"
+          endpoint: "0.0.0.0:4317"
+
+        otlp/2:
+          endpoint: 34.72.102.156:8086
+          headers:
+            "Authorization": "Bearer abc"
+          insecure: true
+
+        jaeger:
+          endpoint: 34.72.102.156:14250
+          insecure: true
 
     processors:
         batch:
@@ -39,9 +53,9 @@ data:
         extensions: [health_check]
         pipelines:
           traces:
-            receivers: [otlp]
-            exporters: [logging, otlp]
+            receivers: [otlp, otlp/2, jaeger]
+            exporters: [logging, otlp, jaeger, otlp/2]
             processors: [batch]
           metrics:
-            receivers: [otlp, redis, k8s_cluster]
+            receivers: [otlp, redis]
             exporters: [logging, otlp]

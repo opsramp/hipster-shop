@@ -24,12 +24,14 @@ import (
 	pb "github.com/GoogleCloudPlatform/microservices-demo/src/checkoutservice/genproto"
 	"github.com/GoogleCloudPlatform/microservices-demo/src/checkoutservice/money"
 	"github.com/google/uuid"
-	"github.com/lightstep/otel-launcher-go/launcher"
+	"github.com/kant777/otel-launcher-go/launcher"
 	"github.com/sirupsen/logrus"
 	grpcotel "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/label"
+
+	//"go.opentelemetry.io/otel"
+	label "go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/global"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
@@ -43,8 +45,8 @@ const (
 
 var (
 	log        *logrus.Logger
-	meter      = otel.Meter("checkoutservice/metrics")
-	orderCount = metric.Must(meter).NewInt64Counter("checkoutservice.order")
+	meter      = global.Meter("checkoutservice/metrics")
+	orderCount = metric.Must(meter).NewInt64Counter("checkoutservice/metrics")
 )
 
 func init() {
@@ -107,13 +109,15 @@ func main() {
 
 func initLightstepTracing(log logrus.FieldLogger) launcher.Launcher {
 	launcher := launcher.ConfigureOpentelemetry(
+		launcher.WithServiceName("checkoutservice"),
 		launcher.WithServiceVersion("5.3.1"),
 		launcher.WithLogLevel("debug"),
 		launcher.WithSpanExporterEndpoint(fmt.Sprintf("%s:%s",
-			os.Getenv("LIGHTSTEP_HOST"), os.Getenv("LIGHTSTEP_PORT"))),
+			"otel-collector", "55680")),
+		launcher.WithSpanExporterInsecure(true),
 		launcher.WithLogger(log),
 	)
-	log.Info("Initialized Lightstep OpenTelemetry launcher")
+	log.Info("Initialized OpenTelemetry launcher")
 	return launcher
 }
 

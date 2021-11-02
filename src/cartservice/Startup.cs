@@ -25,9 +25,9 @@ namespace cartservice
         {
             Configuration = configuration;
         }
-        const string LIGHTSTEP_ACCESS_TOKEN = "LS_ACCESS_TOKEN";
-        const string LIGHTSTEP_HOST = "LIGHTSTEP_HOST";
-        const string LIGHTSTEP_PORT = "LIGHTSTEP_PORT";
+       // const string LIGHTSTEP_ACCESS_TOKEN = "LS_ACCESS_TOKEN";
+       // const string LIGHTSTEP_HOST = "LIGHTSTEP_HOST";
+       // const string LIGHTSTEP_PORT = "LIGHTSTEP_PORT";
         public IConfiguration Configuration { get; }
         
         // This method gets called by the runtime. Use this method to add services to the container.
@@ -37,13 +37,13 @@ namespace cartservice
 
             AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
 
-            string lsHost = Environment.GetEnvironmentVariable(LIGHTSTEP_HOST);
-            int lsPort = Int32.Parse(Environment.GetEnvironmentVariable(LIGHTSTEP_PORT));
-            string serviceName = Environment.GetEnvironmentVariable("LS_SERVICE_NAME");
-            string accessToken = Environment.GetEnvironmentVariable(LIGHTSTEP_ACCESS_TOKEN);
+         //   string lsHost = Environment.GetEnvironmentVariable(LIGHTSTEP_HOST);
+         //   int lsPort = Int32.Parse(Environment.GetEnvironmentVariable(LIGHTSTEP_PORT));
+              string serviceName = "cartservice"; //Environment.GetEnvironmentVariable("LS_SERVICE_NAME");
+         //   string accessToken = Environment.GetEnvironmentVariable(LIGHTSTEP_ACCESS_TOKEN);
             // create and register an activity source
             var activitySource = new ActivitySource(serviceName);
-            services.AddSingleton(activitySource);
+           // services.AddSingleton(activitySource);
 
             // from: https://github.com/kellybirr/tracing-demo
             OpenTelemetry.Sdk.SetDefaultTextMapPropagator(new B3Propagator());
@@ -73,12 +73,12 @@ namespace cartservice
                 .AddRedisInstrumentation(cartStore.Connection)
                 .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(serviceName))
                 .AddOtlpExporter(opt => {
-                    opt.Endpoint = $"{lsHost}:{lsPort}";
-                    opt.Headers = new Metadata
-                    {
-                        { "lightstep-access-token", accessToken }
-                    };
-                    opt.Credentials = new SslCredentials();
+                    opt.Endpoint = "otel-collector:55680";
+             //       opt.Headers = new Metadata
+             //       {
+             //           { "lightstep-access-token", accessToken }
+             //      };
+             //       opt.Credentials = new SslCredentials();
             }));
 
             // Initialize the redis store

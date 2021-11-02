@@ -31,9 +31,10 @@ import (
 	pb "github.com/GoogleCloudPlatform/microservices-demo/src/frontend/genproto"
 	"github.com/GoogleCloudPlatform/microservices-demo/src/frontend/money"
 
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/label"
+	//"go.opentelemetry.io/otel"
+	label "go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -42,7 +43,7 @@ var (
 			Funcs(template.FuncMap{
 			"renderMoney": renderMoney,
 		}).ParseGlob("templates/*.html"))
-	meter           = otel.Meter("frontend")
+	meter           = global.Meter("frontend")
 	checkoutCounter = metric.Must(meter).NewInt64Counter("frontend.checkout.count")
 	productCounter  = metric.Must(meter).NewInt64Counter("frontend.product.count")
 	cartCounter     = metric.Must(meter).NewInt64Counter("frontend.cart.count")

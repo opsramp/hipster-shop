@@ -276,13 +276,14 @@ public final class AdService {
      */
     RpcViews.registerAllViews();
 
+    /*
     new Thread(
             new Runnable() {
               public void run() {
                 initStackdriver();
               }
             })
-        .start();
+        .start();*/
 
     // Register Jaeger
     initJaeger();

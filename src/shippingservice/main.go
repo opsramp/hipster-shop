@@ -29,7 +29,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	pb "github.com/GoogleCloudPlatform/microservices-demo/src/shippingservice/genproto"
-	"github.com/lightstep/otel-launcher-go/launcher"
+	"github.com/kant777/otel-launcher-go/launcher"
 	grpcotel "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 )

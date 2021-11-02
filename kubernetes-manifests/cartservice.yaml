@@ -31,9 +31,6 @@ spec:
         image: cartservice
         ports:
         - containerPort: 7070
-        envFrom:
-        - configMapRef:
-            name: lightstep-configmap
         env:
         - name: REDIS_ADDR
           value: "redis-cart:6379"
@@ -41,14 +38,6 @@ spec:
           value: "7070"
         - name: LISTEN_ADDR
           value: "0.0.0.0"
-        # Lightstep config
-        - name: LS_SERVICE_NAME
-          value: cartservice
-        - name: LS_ACCESS_TOKEN
-          valueFrom:
-            secretKeyRef:
-              name: lightstep-credentials
-              key: accessToken
         - name: HIPSTER_SICK # Used for GCP demo
           value: "false"
         resources:

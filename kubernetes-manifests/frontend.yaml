@@ -50,9 +50,6 @@ spec:
               httpHeaders:
               - name: "Cookie"
                 value: "shop_session-id=x-liveness-probe"
-          envFrom:
-          - configMapRef:
-              name: lightstep-configmap
           env:
           - name: PORT
             value: "8080"
@@ -70,15 +67,10 @@ spec:
             value: "checkoutservice:5050"
           - name: AD_SERVICE_ADDR
             value: "adservice:9555"
-          - name: LS_SERVICE_NAME
+          - name: JAEGER_SERVICE_ADDR
+            value: "otel-collector:14268"
+          - name: SERVICE_NAME
             value: frontend
-          - name: LS_ACCESS_TOKEN
-            valueFrom:
-              secretKeyRef:
-                name: lightstep-credentials
-                key: accessToken
-          # - name: JAEGER_SERVICE_ADDR
-          #   value: "jaeger-collector:14268"
           resources:
             requests:
               cpu: 100m

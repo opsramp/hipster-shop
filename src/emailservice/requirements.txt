@@ -70,7 +70,7 @@ opentelemetry-instrumentation==0.17b0
     #   opentelemetry-instrumentation-sqlite3
     #   opentelemetry-instrumentation-wsgi
     #   opentelemetry-launcher
-opentelemetry-launcher==0.17b0
+git+https://github.com/opsramp/otel-launcher-python@v0.17b0
     # via -r requirements.in
 opentelemetry-propagator-b3==0.17b0
     # via opentelemetry-launcher

@@ -31,23 +31,11 @@ spec:
         image: emailservice
         ports:
         - containerPort: 8080
-        envFrom:
-          - configMapRef:
-              name: lightstep-configmap
         env:
         - name: PORT
           value: "8080"
         - name: ENABLE_PROFILER
           value: "0"
-        - name: LS_SERVICE_NAME
-          value: emailservice
-        - name: LS_ACCESS_TOKEN
-          valueFrom:
-            secretKeyRef:
-              name: lightstep-credentials
-              key: accessToken
-        - name: LS_METRICS_ENABLED
-          value: "False"
         readinessProbe:
           periodSeconds: 5
           exec:

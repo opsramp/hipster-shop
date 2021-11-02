@@ -13,12 +13,9 @@ module.exports = (serviceName) => {
   const provider = new NodeTracerProvider();
 
   const exporter = new CollectorTraceExporter({
-    serviceName: serviceName,
+    serviceName: "paymentservice",
     logger: new ConsoleLogger(LogLevel.ERROR),
-    url: `https://${process.env.LIGHTSTEP_HOST}/traces/otlp/v0.6`,
-    headers: {
-      'Lightstep-Access-Token': process.env.LS_ACCESS_TOKEN
-    },
+    url: `http://otel-collector:55681/v1/trace`,
   });
 
   provider.addSpanProcessor(new SimpleSpanProcessor(exporter));
